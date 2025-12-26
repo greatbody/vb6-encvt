@@ -54,7 +54,7 @@ func safeWrite(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	name := filepath.Base(path)
 	tmpPath := filepath.Join(dir, name+".tmp")
-	bakPath := filepath.Join(dir, name+".bak")
+	// bakPath := filepath.Join(dir, name+".bak")
 
 	// 1. Write to tmp
 	// Use 0666 for permissions, respecting umask, or copy original perms?
@@ -69,18 +69,10 @@ func safeWrite(path string, data []byte) error {
 		return fmt.Errorf("write tmp failed: %w", err)
 	}
 
-	// 2. Backup original
-	// If backup exists, overwrite? Yes.
-	if err := os.Rename(path, bakPath); err != nil {
-		// Clean up tmp
-		os.Remove(tmpPath)
-		return fmt.Errorf("backup failed: %w", err)
-	}
-
-	// 3. Rename tmp to original
+	// 2. Rename tmp to original (Atomic replace)
 	if err := os.Rename(tmpPath, path); err != nil {
-		// Try to restore backup?
-		os.Rename(bakPath, path) // Attempt restore
+		// Clean up tmp on failure
+		os.Remove(tmpPath)
 		return fmt.Errorf("replace failed: %w", err)
 	}
 
